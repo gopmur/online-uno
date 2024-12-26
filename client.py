@@ -18,34 +18,62 @@ def enter_game(connection: socket.socket, message: dict[str, Any]):
     print("")
     current_card = message["current_card"]
     print(f"current card: {colored(current_card["type"], current_card["color"])}")
-    if id == message["turn"]: 
-      while (True):  
+    if id == message["turn"]:
+      valid_move = False 
+      while not valid_move:
         command = input("> ").strip()
+        
         if command == "draw":
-          send_message(connection, {
+          response = send_and_recv_message(connection, {
             "type": MessageType.DRAW_CARD_REQUEST.name
           })
-          message = recv_message(connection)
-          if message["type"] == MessageType.ERROR.name:
+          if response["type"] == MessageType.ERROR.name:
             print("cannot draw card")
-            continue
-          break
-        if command.startswith("play"):
+          else:
+            message = response
+            valid_move = True
+          
+        elif command.startswith("play"):
+          card_index = None
           try:
             card_index = int(command[5:])
-            send_message(connection, {
+            message["hand"][card_index]
+          except:
+            print("invalid card index")
+            continue
+          
+          if card_index != None and message["hand"][card_index]["color"] == "black":
+            color = input("color: ")
+            if color not in ["red", "green", "blue", "yellow"]:
+              print("invalid color")
+              continue
+            
+            response = send_and_recv_message(connection, {
+              "type": MessageType.CARD_DROP_REQUEST.name,
+              "card_index": card_index,
+              "color": color
+            })
+            if response["type"] == MessageType.ERROR.name:
+              print("cannot play card")
+            else:
+              message = response
+              valid_move = True
+              break
+            
+          elif card_index != None:
+            response = send_and_recv_message(connection, {
               "type": MessageType.CARD_DROP_REQUEST.name,
               "card_index": card_index
             })
-            message = recv_message(connection)
-            if message["type"] == MessageType.ERROR.name:
+            if response["type"] == MessageType.ERROR.name:
               print("cannot play card")
-              continue
-            break
-          except:
-            print("invalid card index")
+            else:
+              message = response
+              valid_move = True
+        
         else:
           print("invalid command")
+        
     else:
       message = recv_message(connection)
 
