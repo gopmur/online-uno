@@ -1,5 +1,3 @@
-from curses import OK
-from os import name
 import socket
 import threading
 
@@ -91,14 +89,14 @@ def logout_user(connection: socket.socket, client_address: tuple[str, int], user
       })
       print(f"failed to logout user {client_address}")
 
-def create_room(connection: socket.socket, message: dict[str, int], user: User | None) -> None:
+def create_room(connection: socket.socket, message: dict[str, int], user: User | None) -> Room | None:
   player_count = message["player_count"]
   if not user:
     send_message(connection, {
       "type": MessageType.ERROR.name
     })
     print(f"failed to create room")
-    return
+    return None
   with active_rooms_lock:
     room = next(filter(lambda r: r.owner.name == user.name if user else None, active_rooms), None)
     if room:
@@ -106,7 +104,7 @@ def create_room(connection: socket.socket, message: dict[str, int], user: User |
         "type": MessageType.ERROR.name
       })
       print(f"user {user.name} already has a room")
-      return
+      return None
   with active_rooms_lock:
     try:
       room = Room(user, player_count)
@@ -116,20 +114,22 @@ def create_room(connection: socket.socket, message: dict[str, int], user: User |
         "type": MessageType.ERROR.name
       })
       print(f"failed to create room for {user.name}")
-      return
+      return None
   send_message(connection, {
     "type": MessageType.OK.name,
     "room_id": room.id
   })
+  user.id = 0
   print(f"room {room.id} created by {user.name}")
+  return room
 
-def join_room(connection: socket.socket, message: dict[str, str], user: User | None) -> None:
+def join_room(connection: socket.socket, message: dict[str, str], user: User | None) -> Room | None:
   if not user:
     print(f"user cannot join because not logged in")
     send_message(connection, {
       "type": MessageType.ERROR.name
     })
-    return
+    return None
   room_id = message["room_id"]
   with active_rooms_lock:
     active_room = next(filter(lambda room : room.id == room_id, active_rooms), None)
@@ -138,13 +138,13 @@ def join_room(connection: socket.socket, message: dict[str, str], user: User | N
       send_message(connection, {
         "type": MessageType.ERROR.name
       })
-      return
+      return None
     if active_room.is_full:
       print(f"user {user.name} cannot join because room {room_id} is full")
       send_message(connection, {
         "type": MessageType.ERROR.name
       })
-      return
+      return None
     try:
       active_room.add_user(user)
       print(f"user {user.name} joined room {room_id}")
@@ -153,7 +153,7 @@ def join_room(connection: socket.socket, message: dict[str, str], user: User | N
       send_message(connection, {
         "type": MessageType.ERROR.name
       })
-      return
+      return None
     for user_in_room in active_room.users:
       send_message(user_in_room.connection, {
         "type": MessageType.ROOM_JOIN_UPDATE.name,
@@ -163,13 +163,115 @@ def join_room(connection: socket.socket, message: dict[str, str], user: User | N
       })
     if active_room.is_full:
       print(f"game with id {room_id} started")
-      for user_in_room in active_room.users:
+      for (i, user_in_room) in enumerate(active_room.users):
         send_message(user_in_room.connection, {
-          "type": MessageType.GAME_START_UPDATE.name
+          "type": MessageType.GAME_START_UPDATE.name,
+          "hand": list(map(lambda card: {
+              "color": card.color,
+              "type": card.card_type,
+            }, 
+            active_room.game.players[i].hand
+          )),
+          "turn": active_room.game.current_player.player_id,
+          "id": i,
+          "current_card": {
+            "color": active_room.game.current_card.color,
+            "type": active_room.game.current_card.card_type,
+          }
         })
+    user.id = len(active_room.users) - 1
+    return active_room
    
+def drop_card(connection: socket.socket, message: dict[str, int], user: User | None, room: Room | None) -> None:
+  if not user or not room:
+    print(f"failed to drop card")
+    send_message(connection, {
+      "type": MessageType.ERROR.name
+    })
+    return 
+  card_index = message["card_index"]
+  current_player = room.game.current_player
+  if user.id != current_player.player_id:
+    print(f"failed to drop card")
+    send_message(connection, {
+      "type": MessageType.ERROR.name
+    })
+    return
+  card = current_player.hand[card_index]
+  if current_player.can_play(room.game.current_card) and room.game.current_card.playable(card):
+    room.game.play(player=current_player.player_id, card=card_index)
+    for (i, user_in_room) in enumerate(room.users):
+      send_message(user_in_room.connection, { 
+        "type": MessageType.GAME_UPDATE.name,
+        "hand": list(map(lambda card: {
+            "color": card.color,
+            "type": card.card_type,
+          }, 
+          room.game.players[i].hand
+        )),
+        "turn": room.game.current_player.player_id,
+        "current_card": {
+          "color": room.game.current_card.color,
+          "type": room.game.current_card.card_type,
+        }
+      })
+    if len(current_player.hand) == 0:
+      for user_in_room in room.users:
+        send_message(user_in_room.connection, {
+          "type": MessageType.GAME_END_UPDATE.name,
+          "winner": current_player.name
+        })
+      with active_rooms_lock:
+        active_rooms.remove(room)
+    return
+  print(f"failed to drop card")
+  send_message(connection, {
+    "type": MessageType.ERROR.name
+  })
+  
+def draw_card(connection: socket.socket, message: dict[str, int], user: User | None, room: Room | None) -> None:
+  if not user or not room:
+    print(f"failed to draw card")
+    send_message(connection, {
+      "type": MessageType.ERROR.name
+    })
+    return 
+  current_player = room.game.current_player
+  if user.id != current_player.player_id:
+    print(f"failed to draw card")
+    send_message(connection, {
+      "type": MessageType.ERROR.name
+    })
+    return
+  room.game.play(player=current_player.player_id, card=None)
+  for (i, user_in_room) in enumerate(room.users):
+    send_message(user_in_room.connection, { 
+      "type": MessageType.GAME_UPDATE.name,
+      "hand": list(map(lambda card: {
+          "color": card.color,
+          "type": card.card_type,
+        }, 
+        room.game.players[i].hand
+      )),
+      "turn": room.game.current_player.player_id,
+      "current_card": {
+        "color": room.game.current_card.color,
+        "type": room.game.current_card.card_type,
+      }
+    })
+  if len(current_player.hand) == 0:
+    for user_in_room in room.users:
+      send_message(user_in_room.connection, {
+        "type": MessageType.GAME_END_UPDATE.name,
+        "winner": current_player.name
+      })
+    with active_rooms_lock:
+      active_rooms.remove(room)
+    return
+  
 def serve_client(connection: socket.socket, client_address: tuple[str, int]) -> None:
   user: User | None = None
+  room: Room | None = None
   try:
     while (True):      
       message = recv_message(connection)
@@ -183,9 +285,13 @@ def serve_client(connection: socket.socket, client_address: tuple[str, int]) -> 
         logout_user(connection, client_address, user)
         user = None
       elif (message["type"] == MessageType.ROOM_CREATION_REQUEST.name):
-        create_room(connection, message, user)
+        room = create_room(connection, message, user)
       elif (message["type"] == MessageType.ROOM_CONNECTION_REQUEST.name):
-        join_room(connection, message, user)
+        room = join_room(connection, message, user)
+      elif (message["type"] == MessageType.CARD_DROP_REQUEST.name):
+        drop_card(connection, message, user, room)
+      elif message["type"] == MessageType.DRAW_CARD_REQUEST.name:
+        draw_card(connection, message, user, room)
       else:
         send_message(connection, {
           "type": MessageType.ERROR.name

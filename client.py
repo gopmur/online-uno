@@ -1,13 +1,53 @@
-from asyncio import wait_for
 import socket
 import sys
+from typing import Any
 from lib.proto import MessageType, recv_message, send_and_recv_message, send_message
 import readline
+from termcolor import colored
 
-def enter_game(connection: socket.socket):
-  print("game started")
+def enter_game(connection: socket.socket, message: dict[str, Any]):
+  id = message["id"]
   while (True):
-    pass
+    if message["type"] == MessageType.GAME_END_UPDATE.name:
+      print("game ended")
+      print(f"winner: {message['winner']}")
+      break
+    print(f"your hand:")
+    for (i, card) in enumerate(message["hand"]):
+      print(f"{i}. {colored(card["type"], card["color"])}")
+    print("")
+    current_card = message["current_card"]
+    print(f"current card: {colored(current_card["type"], current_card["color"])}")
+    if id == message["turn"]: 
+      while (True):  
+        command = input("> ").strip()
+        if command == "draw":
+          send_message(connection, {
+            "type": MessageType.DRAW_CARD_REQUEST.name
+          })
+          message = recv_message(connection)
+          if message["type"] == MessageType.ERROR.name:
+            print("cannot draw card")
+            continue
+          break
+        if command.startswith("play"):
+          try:
+            card_index = int(command[5:])
+            send_message(connection, {
+              "type": MessageType.CARD_DROP_REQUEST.name,
+              "card_index": card_index
+            })
+            message = recv_message(connection)
+            if message["type"] == MessageType.ERROR.name:
+              print("cannot play card")
+              continue
+            break
+          except:
+            print("invalid card index")
+        else:
+          print("invalid command")
+    else:
+      message = recv_message(connection)
 
 def wait_for_game_start(connection: socket.socket):
   while (True):
@@ -18,8 +58,8 @@ def wait_for_game_start(connection: socket.socket):
       joined_username = message["username"]
       print(f"{joined_username} join the room")
       print(f"{current_player_count}/{max_player_count} joined")
-    elif message["type"] == MessageType.GAME_START_UPDATE.name:
-      enter_game(connection)
+    elif message["type"] == MessageType.GAME_START_UPDATE.name: 
+      enter_game(connection, message)
     elif message["type"] == MessageType.ROOM_CLOSE_UPDATE.name:
       print("room closed")
       break

@@ -13,6 +13,10 @@ class MessageType(Enum):
   ROOM_CLOSE_UPDATE = auto()
   ROOM_JOIN_UPDATE = auto()
   GAME_START_UPDATE = auto()
+  GAME_UPDATE = auto()
+  GAME_END_UPDATE = auto()
+  CARD_DROP_REQUEST = auto()
+  DRAW_CARD_REQUEST = auto()
   OK = auto()
   ERROR = auto()
   
