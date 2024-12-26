@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "uno-project"
+version = "0.1.0"
+description = "Online Uno game for midterm computer networks project"
+authors = ["Ali Jafari <ali81jafari@outlook.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+peewee = "^3.17.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
