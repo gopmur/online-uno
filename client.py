@@ -17,7 +17,10 @@ def enter_game(connection: socket.socket, message: dict[str, Any]):
       print(f"{i}. {colored(card["type"], card["color"])}")
     print("")
     current_card = message["current_card"]
-    print(f"current card: {colored(current_card["type"], current_card["color"])}")
+    if current_card["color"] == "black":
+      print(f"current card: {colored(current_card["type"], current_card["color"])} ({current_card['new_color']})")
+    else:
+      print(f"current card: {colored(current_card["type"], current_card["color"])}")
     if id == message["turn"]:
       valid_move = False 
       while not valid_move:

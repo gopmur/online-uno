@@ -199,15 +199,16 @@ def drop_card(connection: socket.socket, message: dict[str, int], user: User | N
     return
   card = current_player.hand[card_index]
   if current_player.can_play(room.game.current_card) and room.game.current_card.playable(card):
+    new_color = None
     if card.color == 'black':
-      color = message["color"]
-      if color not in ["red", "green", "blue", "yellow"]:
+      new_color = message["color"]
+      if new_color not in ["red", "green", "blue", "yellow"]:
         print(f"failed to drop card")
         send_message(connection, {
           "type": MessageType.ERROR.name
         })
         return
-      room.game.play(player=current_player.player_id, card=card_index, new_color=color)
+      room.game.play(player=current_player.player_id, card=card_index, new_color=new_color)
     else:
       room.game.play(player=current_player.player_id, card=card_index)
     for (i, user_in_room) in enumerate(room.users):
@@ -223,7 +224,8 @@ def drop_card(connection: socket.socket, message: dict[str, int], user: User | N
         "current_card": {
           "color": room.game.current_card.color,
           "type": room.game.current_card.card_type,
-        }
+        },
+        "new_color": new_color
       })
     if len(current_player.hand) == 0:
       for user_in_room in room.users:
