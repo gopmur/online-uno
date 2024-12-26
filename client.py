@@ -13,6 +13,9 @@ def wait_for_game_start(connection: socket.socket):
       joined_username = message["username"]
       print(f"{joined_username} join the room")
       print(f"{current_player_count}/{max_player_count} joined")
+    elif message["type"] == MessageType.ROOM_CLOSE_UPDATE.name:
+      print("room closed")
+      break
 
 if __name__ == "__main__":
   server_ip = "127.0.0.1"
