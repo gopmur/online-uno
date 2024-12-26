@@ -211,31 +211,34 @@ def drop_card(connection: socket.socket, message: dict[str, int], user: User | N
       room.game.play(player=current_player.player_id, card=card_index, new_color=new_color)
     else:
       room.game.play(player=current_player.player_id, card=card_index)
-    for (i, user_in_room) in enumerate(room.users):
-      send_message(user_in_room.connection, { 
-        "type": MessageType.GAME_UPDATE.name,
-        "hand": list(map(lambda card: {
-            "color": card.color,
-            "type": card.card_type,
-          }, 
-          room.game.players[i].hand
-        )),
-        "turn": room.game.current_player.player_id,
-        "current_card": {
-          "color": room.game.current_card.color,
-          "type": room.game.current_card.card_type,
-        },
-        "new_color": new_color
-      })
     if len(current_player.hand) == 0:
       for user_in_room in room.users:
         send_message(user_in_room.connection, {
           "type": MessageType.GAME_END_UPDATE.name,
-          "winner": current_player.name
+          "winner": room.users[current_player.player_id].name
         })
       with active_rooms_lock:
         active_rooms.remove(room)
+    else:
+      for (i, user_in_room) in enumerate(room.users):
+        send_message(user_in_room.connection, { 
+          "type": MessageType.GAME_UPDATE.name,
+          "hand": list(map(lambda card: {
+              "color": card.color,
+              "type": card.card_type,
+            }, 
+            room.game.players[i].hand
+          )),
+          "turn": room.game.current_player.player_id,
+          "current_card": {
+            "color": room.game.current_card.color 
+            if room.game.current_card.color != "black" or room.game.current_card.temp_color == None 
+            else room.game.current_card.temp_color,
+            "type": room.game.current_card.card_type,
+          },
+        })
     return
+  
   print(f"failed to drop card")
   send_message(connection, {
     "type": MessageType.ERROR.name
@@ -267,7 +270,9 @@ def draw_card(connection: socket.socket, message: dict[str, int], user: User | N
       )),
       "turn": room.game.current_player.player_id,
       "current_card": {
-        "color": room.game.current_card.color,
+        "color": room.game.current_card.color 
+          if room.game.current_card.color != "black" or room.game.current_card.temp_color == None 
+          else room.game.current_card.temp_color,
         "type": room.game.current_card.card_type,
       }
     })

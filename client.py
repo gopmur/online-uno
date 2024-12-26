@@ -17,10 +17,7 @@ def enter_game(connection: socket.socket, message: dict[str, Any]):
       print(f"{i}. {colored(card["type"], card["color"])}")
     print("")
     current_card = message["current_card"]
-    if current_card["color"] == "black":
-      print(f"current card: {colored(current_card["type"], current_card["color"])} ({current_card['new_color']})")
-    else:
-      print(f"current card: {colored(current_card["type"], current_card["color"])}")
+    print(f"current card: {colored(current_card["type"], current_card["color"])}")
     if id == message["turn"]:
       valid_move = False 
       while not valid_move:
@@ -91,6 +88,7 @@ def wait_for_game_start(connection: socket.socket):
       print(f"{current_player_count}/{max_player_count} joined")
     elif message["type"] == MessageType.GAME_START_UPDATE.name: 
       enter_game(connection, message)
+      break
     elif message["type"] == MessageType.ROOM_CLOSE_UPDATE.name:
       print("room closed")
       break
