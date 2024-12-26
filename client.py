@@ -5,7 +5,14 @@ from lib.proto import MessageType, recv_message, send_and_recv_message, send_mes
 import readline
 
 def wait_for_game_start(connection: socket.socket):
-  pass
+  while (True):
+    message = recv_message(connection)
+    if message["type"] == MessageType.ROOM_JOIN_UPDATE.name:
+      max_player_count = message["max_player_count"]
+      current_player_count = message["current_player_count"]
+      joined_username = message["username"]
+      print(f"{joined_username} join the room")
+      print(f"{current_player_count}/{max_player_count} joined")
 
 if __name__ == "__main__":
   server_ip = "127.0.0.1"

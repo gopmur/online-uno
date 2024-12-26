@@ -154,8 +154,6 @@ def join_room(connection: socket.socket, message: dict[str, str], user: User | N
       })
       return
     for (i, user_in_room) in enumerate(active_room.users):
-      if i == 0:
-        continue
       send_message(user_in_room.connection, {
         "type": MessageType.ROOM_JOIN_UPDATE.name,
         "username": user.name,
@@ -163,11 +161,6 @@ def join_room(connection: socket.socket, message: dict[str, str], user: User | N
         "current_player_count": len(active_room.users)
       })
   print(f"user {user.name} joined room {room_id}")
-  send_message(connection, {
-    "type": MessageType.OK.name,
-    "max_player_count": active_room.max_player_count,
-    "current_player_count": len(active_room.users)
-  })
    
 def serve_client(connection: socket.socket, client_address: tuple[str, int]) -> None:
   user: User | None = None
