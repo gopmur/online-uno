@@ -212,11 +212,23 @@ def drop_card(connection: socket.socket, message: dict[str, int], user: User | N
     else:
       room.game.play(player=current_player.player_id, card=card_index)
     if len(current_player.hand) == 0:
-      for user_in_room in room.users:
+      for (i, user_in_room) in enumerate(room.users):
         send_message(user_in_room.connection, {
           "type": MessageType.GAME_END_UPDATE.name,
           "winner": room.users[current_player.player_id].name
         })
+        if i == current_player.player_id:
+          with db.atomic():
+            user = models.User.get(models.User.username == user_in_room.name)
+            if type(user) == models.User:  
+              user.wins += 1
+              user.save()
+          continue
+        with db.atomic():
+          user = models.User.get(models.User.username == user_in_room.name)
+          if type(user) == models.User:  
+            user.losses += 1
+            user.save()
       with active_rooms_lock:
         active_rooms.remove(room)
     else:
