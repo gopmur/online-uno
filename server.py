@@ -147,20 +147,26 @@ def join_room(connection: socket.socket, message: dict[str, str], user: User | N
       return
     try:
       active_room.add_user(user)
+      print(f"user {user.name} joined room {room_id}")
     except:
       print(f"user {user.name} cannot join because room {room_id} already is joined")
       send_message(connection, {
         "type": MessageType.ERROR.name
       })
       return
-    for (i, user_in_room) in enumerate(active_room.users):
+    for user_in_room in active_room.users:
       send_message(user_in_room.connection, {
         "type": MessageType.ROOM_JOIN_UPDATE.name,
         "username": user.name,
         "max_player_count": active_room.max_player_count,
         "current_player_count": len(active_room.users)
       })
-  print(f"user {user.name} joined room {room_id}")
+    if active_room.is_full:
+      print(f"game with id {room_id} started")
+      for user_in_room in active_room.users:
+        send_message(user_in_room.connection, {
+          "type": MessageType.GAME_START_UPDATE.name
+        })
    
 def serve_client(connection: socket.socket, client_address: tuple[str, int]) -> None:
   user: User | None = None

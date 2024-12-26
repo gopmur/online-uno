@@ -12,6 +12,7 @@ class MessageType(Enum):
   LOGOUT_REQUEST = auto()
   ROOM_CLOSE_UPDATE = auto()
   ROOM_JOIN_UPDATE = auto()
+  GAME_START_UPDATE = auto()
   OK = auto()
   ERROR = auto()
   

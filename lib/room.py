@@ -46,7 +46,7 @@ class Room:
   
   @property
   def is_full(self) -> bool:
-    return self.max_player_count == self.player_count
+    return self.max_player_count == len(self.users)
   
   @property
   def max_player_count(self) -> int:

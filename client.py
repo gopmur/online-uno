@@ -4,6 +4,11 @@ import sys
 from lib.proto import MessageType, recv_message, send_and_recv_message, send_message
 import readline
 
+def enter_game(connection: socket.socket):
+  print("game started")
+  while (True):
+    pass
+
 def wait_for_game_start(connection: socket.socket):
   while (True):
     message = recv_message(connection)
@@ -13,6 +18,8 @@ def wait_for_game_start(connection: socket.socket):
       joined_username = message["username"]
       print(f"{joined_username} join the room")
       print(f"{current_player_count}/{max_player_count} joined")
+    elif message["type"] == MessageType.GAME_START_UPDATE.name:
+      enter_game(connection)
     elif message["type"] == MessageType.ROOM_CLOSE_UPDATE.name:
       print("room closed")
       break
