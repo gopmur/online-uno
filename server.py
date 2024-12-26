@@ -69,9 +69,13 @@ def whoami(connection: socket.socket, client_address: tuple[str, int], user: Use
     })
     print(f"failed to get user information for {client_address}")
   else:
+    with db.atomic():
+      user_data = models.User.get(models.User.username == user.name)
     send_message(connection, {
       "type": MessageType.OK.name,
       "username": user.name,
+      "wins": user_data.wins,
+      "losses": user_data.losses
     })
     print(f"sent user information for {client_address}")
 

@@ -1,3 +1,4 @@
+from math import pi
 import socket
 import sys
 from typing import Any
@@ -109,6 +110,8 @@ if __name__ == "__main__":
         print("register - register a new account")
         print("whoami - show the current user")
         print("logout - logout from the server")
+        print("new room - create a new room")
+        print("join room - join a room")
         print("exit - exit the program")
         print("help - show this message")
       elif (command == "login"):
@@ -144,6 +147,8 @@ if __name__ == "__main__":
           print("failed to get user information")
         else:
           print(f"{response['username']}")
+          print(f"wins: {response['wins']}")
+          print(f"losses: {response['losses']}")
       elif (command == "logout"):
         response = send_and_recv_message(connection, {
           "type": MessageType.LOGOUT_REQUEST.name
