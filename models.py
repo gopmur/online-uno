@@ -16,8 +16,4 @@ db.connect()
 if __name__ == "__main__":
   db.create_tables([User])
 
-  # User.create(username="gopmur", password="1234")
-  # for user in User.select():
-  #     print(user.username, user.password)
-
 
